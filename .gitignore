@@ -1,0 +1,175 @@
+########################################
+# PYTHON CORE
+########################################
+
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Compiled C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+*.egg-info/
+.installed.cfg
+*.egg
+
+########################################
+# VIRTUAL ENVIRONMENTS
+########################################
+
+venv/
+env/
+ENV/
+.venv/
+.ENV/
+
+########################################
+# ENVIRONMENT VARIABLES / SECRETS
+########################################
+
+.env
+.env.*
+*.env
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.pfx
+
+# TLS / Certbot
+certs/
+letsencrypt/
+acme-challenge/
+
+########################################
+# TESTING / COVERAGE
+########################################
+
+.coverage
+.coverage.*
+.cache/
+pytest_cache/
+htmlcov/
+.tox/
+.nox/
+
+########################################
+# LOGS
+########################################
+
+*.log
+logs/
+*.out
+*.err
+
+########################################
+# DATABASES
+########################################
+
+*.sqlite3
+*.db
+*.db-journal
+
+########################################
+# IDE / EDITOR
+########################################
+
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+########################################
+# DOCKER
+########################################
+
+docker-compose.override.yml
+*.tar
+*.tar.gz
+
+# Docker runtime data
+docker-data/
+volumes/
+
+########################################
+# CI / CD
+########################################
+
+# Local CI artifacts
+coverage.xml
+junit.xml
+*.lcov
+
+########################################
+# NETWORKING / PACKET CAPTURE
+########################################
+
+*.pcap
+*.pcapng
+*.cap
+
+########################################
+# LOAD TESTING OUTPUT
+########################################
+
+benchmark_results/
+load_tests/output/
+*.csv
+*.json (only if generated logs — remove if needed)
+
+########################################
+# OS FILES
+########################################
+
+.DS_Store
+Thumbs.db
+
+########################################
+# CACHES
+########################################
+
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+__pypackages__/
+
+########################################
+# TEMP FILES
+########################################
+
+*.swp
+*.tmp
+*.temp
+*.bak
+
+########################################
+# SECURITY / ATTACK SIMULATION OUTPUT
+########################################
+
+attack_logs/
+payload_dumps/
+fuzzing_output/
+
+########################################
+# BUILD ARTIFACTS (C / Cython if used)
+########################################
+
+*.o
+*.a
+*.out
