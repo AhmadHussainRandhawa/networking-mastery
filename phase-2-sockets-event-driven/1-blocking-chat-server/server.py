@@ -8,22 +8,41 @@ clients = []
 lock = threading.Lock()
 
 
-def handle_client(conn, client_addr):
+def broadcast(message, sender_socket):
+    with lock:
+        for client in clients:
+            if client != sender_socket:
+                try:
+                    client.sendall(message)
+                except Exception:
+                    pass
+
+
+def handle_client(client_socket, client_addr):
     while True:
         try:
-            data = conn.recv(1024)
-            
+            data = client_socket.recv(1024)
             if not data: 
-                print(f'Client {client_addr}: disconnected')
+                print(f"Client {client_addr} disconnected")
                 break
-
+            
             print(f"Received from {client_addr}: {data.decode()}")
 
-        except ConnectionResetError:
-            print(f'Client {client_addr}: Disconnected')
+            # Broadcast to others
+            broadcast(data, client_socket)
+
+        except Exception:
             break
-    
-    conn.close()
+
+    # Remove client safely
+    with lock: 
+        if client_socket in clients:
+            clients.remove(client_socket)    
+
+    client_socket.close()
+    print(f"Client {client_addr} disconnected")
+
+
 
 def main():
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -34,15 +53,19 @@ def main():
     print(f"Server listening on {HOST}:{PORT}")
 
     while True:
-        conn, client_address = server_socket.accept()
+        client_socket, client_address = server_socket.accept()
         print(f"New connection from {client_address}")
+
+        with lock:
+            clients.append(client_socket)
 
         thread = threading.Thread(
             target=handle_client,
-            args=(conn, client_address),
+            args=(client_socket, client_address),
             daemon=True
         )
         thread.start()
+
 
 if __name__ == "__main__":
     main()
