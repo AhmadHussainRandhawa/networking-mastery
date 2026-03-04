@@ -4,6 +4,9 @@ import threading
 HOST = "0.0.0.0"
 PORT = 5000
 
+clients = []
+lock = threading.Lock()
+
 
 def handle_client(conn, client_addr):
     while True:
