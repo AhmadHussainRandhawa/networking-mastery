@@ -31,16 +31,20 @@ def accept_connection(server_socket):
 
 def handle_client(key):
     client_socket = key.fileobj
-    data = client_socket.recv(1024)
+
+    try:
+        data = client_socket.recv(1024)
+    except ConnectionResetError:
+        data = None
 
     if not data:
         selector.unregister(client_socket)
         del connections[client_socket]
         client_socket.close()
+        return
     
-    else:
-        print(f"Received: {data.decode()}")
-        broadcast(data, client_socket)
+    print(f"Received: {data.decode()}")
+    broadcast(data, client_socket)
 
 
 def broadcast(message, sender_socket):
