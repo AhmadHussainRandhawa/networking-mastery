@@ -5,14 +5,16 @@ HOST = '0.0.0.0'
 PORT = 5000
 
 selector = selectors.DefaultSelector()
+connections = {}
 
 
 def create_server_socket():
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server_socket.bind((HOST, PORT))
     server_socket.listen()
     server_socket.setblocking(False)
+
     return server_socket
 
 
@@ -21,34 +23,52 @@ def accept_connection(server_socket):
     print(f"New connection from {client_addr}")
 
     client_socket.setblocking(False)
-    selector.register(client_socket, selectors.EVENT_READ, data="client")
+    connections[client_socket] = {
+        "addr": client_addr
+    }
+    selector.register(client_socket, selectors.EVENT_READ, data='client')
+
+
+def handle_client(key):
+    client_socket = key.fileobj
+    data = client_socket.recv(1024)
+
+    if not data:
+        selector.unregister(client_socket)
+        del connections[client_socket]
+        client_socket.close()
+    
+    else:
+        print(f"Received: {data.decode()}")
+        broadcast(data, client_socket)
+
+
+def broadcast(message, sender_socket):
+    for client_socket in connections:
+        if sender_socket != client_socket:
+            try: 
+                client_socket.send(message)
+            except Exception:
+                pass
 
 
 def event_loop():
-    while True:
+    while True: 
         events = selector.select()
 
         for key, mask in events:
             if key.data is None:
                 accept_connection(key.fileobj)
-            else:
-                client_socket = key.fileobj
-                data = client_socket.recv(1024)
-
-                if not data:
-                    print('Client Disconnected')
-                    selector.unregister(client_socket)
-                    client_socket.close()
-                else:
-                    print(f"The received data: {data.decode()}")
+            else: 
+                handle_client(key)
 
 
 def main():
     server_socket = create_server_socket()
-
     selector.register(server_socket, selectors.EVENT_READ, data=None)
 
-    print(f'Event-driven server running on {HOST}:{PORT}')
+    print(f"Event-driven chat server running on {HOST}:{PORT}")
+
     event_loop()
 
 
