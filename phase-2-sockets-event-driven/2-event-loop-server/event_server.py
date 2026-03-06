@@ -5,7 +5,6 @@ HOST = "0.0.0.0"
 PORT = 5000
 
 selector = selectors.DefaultSelector()
-connections = {}
 
 
 def create_server_socket():
@@ -18,67 +17,87 @@ def create_server_socket():
 
 
 def accept_connection(server_socket):
-    client_socket, client_address = server_socket.accept()
-    print(f"New connection from {client_address}")
+    try:
+        client_socket, client_address = server_socket.accept()
+        print(f"New connection from {client_address}")
 
-    client_socket.setblocking(False)
+        client_socket.setblocking(False)
 
-    connections[client_socket] = {
-        "addr": client_address,
-        "out_buffer": b"",
-    }
+        state = {
+            "addr": client_address,
+            "out_buffer": bytearray(),
+            "socket": client_socket,
+        }
 
-    selector.register(client_socket, selectors.EVENT_READ)
+        selector.register(client_socket, selectors.EVENT_READ, data=state)
+
+    except OSError as e:
+        print("Accept error:", e)
 
 
 def broadcast(message, sender_socket):
-    for client_socket, state in connections.items():
-        if client_socket != sender_socket:
-            state["out_buffer"] += message
+    for key in selector.get_map().values():
+        state = key.data
 
-            # Ensure socket is registered for write events
-            selector.modify(
-                client_socket,
-                selectors.EVENT_READ | selectors.EVENT_WRITE
-            )
+        if state is None:
+            continue  # skip server socket
+
+        client_socket = state["socket"]
+
+        if client_socket is sender_socket:
+            continue
+
+        state["out_buffer"] += message
+
+        # Ensure socket is registered for write events
+        selector.modify(client_socket, selectors.EVENT_READ | selectors.EVENT_WRITE, data=state)
 
 
 def handle_read(key):
-    client_socket = key.fileobj
-    try:
-        data = client_socket.recv(1024)
-    except ConnectionResetError:
-        data = None
-        
-    if not data:
-        disconnect(client_socket)
-        return
+    state = key.data
+    client_socket = state["socket"]
 
-    print(f"Received: {data.decode()}")
-    broadcast(data, client_socket)
+    try:
+        data = client_socket.recv(4096)
+
+        if not data:
+            disconnect(client_socket)
+            return
+
+        print(f"Received: {data.decode()}")
+        broadcast(data, client_socket)
+
+    except (ConnectionResetError, OSError):
+        disconnect(client_socket)
 
 
 def handle_write(key):
-    client_socket = key.fileobj
-    state = connections[client_socket]
+    state = key.data
+    client_socket = state["socket"]
 
-    if state["out_buffer"]:
-        try:
+    try:
+        if state["out_buffer"]:
             sent = client_socket.send(state["out_buffer"])
             state["out_buffer"] = state["out_buffer"][sent:]
-        except BlockingIOError:
-            return
 
-    # If nothing left to send, stop monitoring write
-    if not state["out_buffer"]:
-        selector.modify(client_socket, selectors.EVENT_READ)
+        # If nothing left to send, stop monitoring write
+        if not state["out_buffer"]:
+            selector.modify(client_socket, selectors.EVENT_READ, data=state)
+
+    except (BlockingIOError):
+        return
+    except (ConnectionResetError, BrokenPipeError, OSError):
+        disconnect(client_socket)
 
 
 def disconnect(client_socket):
-    print(f"Client {connections[client_socket]['addr']} disconnected")
-    selector.unregister(client_socket)
-    client_socket.close()
-    del connections[client_socket]
+    try:
+        state = selector.get_key(client_socket).data
+        print(f"Client {state['addr']} disconnected")
+        selector.unregister(client_socket)
+        client_socket.close()
+    except Exception:
+        pass
 
 
 def event_loop():
@@ -86,8 +105,10 @@ def event_loop():
         events = selector.select()
 
         for key, mask in events:
+
             if key.data is None:
                 accept_connection(key.fileobj)
+
             else:
                 if mask & selectors.EVENT_READ:
                     handle_read(key)
@@ -98,9 +119,11 @@ def event_loop():
 
 def main():
     server_socket = create_server_socket()
+
     selector.register(server_socket, selectors.EVENT_READ, data=None)
 
     print(f"Event-driven chat server running on {HOST}:{PORT}")
+
     event_loop()
 
 
