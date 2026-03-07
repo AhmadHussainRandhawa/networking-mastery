@@ -41,6 +41,7 @@ class TinyEventLoop():
                     callback(sock)
 
 
+'''
 def main():
     event_loop = TinyEventLoop()
 
@@ -68,3 +69,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+'''
